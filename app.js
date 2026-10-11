@@ -12,9 +12,10 @@
     expenses: ['费用分摊', '每一笔都算清楚，让室友之间只留下好关系。'],
     chores: ['清洁值日', '共同的空间，一起照顾。今天也让家里轻松一点。'],
     supplies: ['公共物品', '消耗有记录，补货有提醒。刚好够用，不再临时找。'],
-    agreement: ['室友公约', '把期待说清楚，让彼此都住得舒服。']
+    agreement: ['室友公约', '把期待说清楚，让彼此都住得舒服。'],
+    life: ['生活乐趣', '藏一点心意，留一些回忆，让合租更像一个家。']
   };
-  const ACTION_LABELS = { overview: '记一笔费用', expenses: '新增费用', chores: '添加值日', supplies: '登记物品', agreement: '发起议题' };
+  const ACTION_LABELS = { overview: '记一笔费用', expenses: '新增费用', chores: '添加值日', supplies: '登记物品', agreement: '发起议题', life: '写下心意' };
   const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const member = id => MEMBERS.find(item => item.id === id) || MEMBERS[0];
   const money = cents => '¥' + (Number(cents || 0) / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -71,7 +72,7 @@
   let view = TITLES[location.hash.slice(1)] ? location.hash.slice(1) : 'overview';
   let expenseFilter = 'all';
   let lastFocus = null;
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (_) { toast('浏览器存储不可用，当前会话仍可体验。'); } }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); return true; } catch (_) { toast('浏览器存储不可用，当前会话仍可体验。'); return false; } }
   function record(text) { state.activity.unshift({ id: id('a'), text, date: today() }); state.activity = state.activity.slice(0, 24); }
   function toast(text) {
     const el = document.getElementById('toast'); if (!el) return;
@@ -136,9 +137,10 @@
     const el = document.getElementById('main-content'); if (!el) return;
     const [title, subtitle] = TITLES[view]; document.getElementById('page-title').textContent = title;
     const sub = document.getElementById('page-subtitle'); if (sub) sub.textContent = subtitle;
-    const action = document.getElementById('primary-action'); if (action) action.textContent = '+ ' + ACTION_LABELS[view];
+    const action = document.getElementById('primary-action'); if (action) action.textContent = '+ ' + (view === 'life' && window.RoommateLife ? window.RoommateLife.getPrimaryLabel() : ACTION_LABELS[view]);
     document.querySelectorAll('[data-view]').forEach(button => { const active = button.dataset.view === view; button.classList.toggle('active', active); if (active) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current'); });
-    el.innerHTML = ({ overview: overviewPage, expenses: expensesPage, chores: choresPage, supplies: suppliesPage, agreement: agreementPage })[view]();
+    el.innerHTML = ({ overview: overviewPage, expenses: expensesPage, chores: choresPage, supplies: suppliesPage, agreement: agreementPage, life: () => window.RoommateLife ? window.RoommateLife.render() : '<div class="card">正在整理生活乐趣…</div>' })[view]();
+    if (view === 'overview') el.insertAdjacentHTML('beforeend', '<section class="card life-home-entry"><div><span class="section-label">不止一起住 / LITTLE JOYS</span><h2>把室友，慢慢变成朋友。</h2><p class="muted">一封心意留言、一场秘密惊喜、一面照片墙，还有每周值得期待的电影夜。</p></div><button class="btn btn-primary" data-view="life">去发现生活乐趣 →</button></section>');
     const select = document.getElementById('member-switch'); if (select) select.value = state.currentMember;
     document.querySelectorAll('[data-view]').forEach(button => { const active = button.dataset.view === view; button.classList.toggle('active', active); if (active) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current'); });
   }
@@ -156,9 +158,9 @@
     const form = document.getElementById('expense-form'); form.addEventListener('input', sharePreview); form.addEventListener('change', sharePreview); sharePreview();
   }
   function sharePreview() {
-    const form = document.getElementById('expense-form'); if (!form) return; const data = new FormData(form); const cents = Math.round(Number(data.get('amount')) * 100); const people = data.getAll('participant'); const weighted = data.get('split') === 'weighted'; const weights = Object.fromEntries(people.map(mid => [mid, weighted ? Number(data.get('weight-' + mid)) || 1 : 1]));
+    const form = document.getElementById('expense-form'); if (!form) return; const data = new FormData(form); const cents = Math.round(Number(data.get('amount')) * 100); const people = data.getAll('participant'); const weighted = data.get('split') === 'weighted'; const weights = Object.fromEntries(people.map(mid => [mid, weighted ? Number(form.elements.namedItem('weight-' + mid).value) || 1 : 1]));
     const shares = people.length && cents > 0 ? allocate(cents, weights) : {};
-    MEMBERS.forEach(m => { form.querySelector(`[data-share="${m.id}"]`).textContent = Object.hasOwn(shares, m.id) ? money(shares[m.id]) : '不参与'; form.querySelector(`[name="weight-${m.id}"]`).disabled = !weighted || !people.includes(m.id); });
+    MEMBERS.forEach(m => { form.querySelector(`[data-share="${m.id}"]`).textContent = Object.hasOwn(shares, m.id) ? money(shares[m.id]) : people.includes(m.id) ? '金额待填' : '不参与'; form.querySelector(`[name="weight-${m.id}"]`).disabled = !weighted || !people.includes(m.id); });
   }
   function choreModal(chore) {
     modal(chore ? '调整值日安排' : '添加清洁值日', `<input type="hidden" name="id" value="${esc(chore ? chore.id : '')}"><div class="form-grid"><label class="field full-width">任务名称<input name="title" value="${esc(chore ? chore.title : '')}" required maxlength="50" placeholder="例如：厨房台面清洁"></label><label class="field">公共区域<select name="area">${['厨房', '客厅', '浴室', '公共区域', '其他'].map(area => `<option ${chore && chore.area === area ? 'selected' : ''}>${area}</option>`).join('')}</select></label><label class="field">负责人<select name="owner">${memberOptions(chore ? chore.owner : state.currentMember)}</select></label><label class="field full-width">值日日期<input name="date" type="date" value="${esc(chore ? chore.date : today())}" required></label></div>`, 'chore-form', '保存安排');
@@ -204,7 +206,7 @@
       const from = String(data.get('from')); const to = String(data.get('to')); const cents = Number(data.get('cents')); const suggestion = suggestions().find(s => s.from === from && s.to === to && s.cents === cents);
       if (!suggestion) return error(form, '这笔结算已更新或已记录，请关闭后重新核对。');
       state.settlements.push({ id: id('settle'), from, to, cents, date: today() }); record(`${member(from).name}已向${member(to).name}转账 ${money(cents)}`); finish('转账已记录，待结算金额已抵扣。');
-    } else if (form.id === 'reset-form') { state = seed(); save(); closeModal(); render(); toast('已恢复演示数据。'); }
+    } else if (form.id === 'reset-form') { state = seed(); if (window.RoommateLife) window.RoommateLife.reset(); save(); closeModal(); render(); toast('已恢复演示数据。'); }
     else if (form.id === 'undo-form') { const sid = String(data.get('id')); const settlement = state.settlements.find(s => s.id === sid); if (!settlement) return error(form, '该记录已撤销。'); state.settlements = state.settlements.filter(s => s.id !== sid); record(`${member(state.currentMember).name}撤销了一笔 ${money(settlement.cents)} 的转账记录`); finish('记录已撤销，相应待结算金额已恢复。'); }
   }
   function generateWeek() {
@@ -217,7 +219,7 @@
   function click(e) {
     const button = e.target.closest('button'); if (!button || button.disabled) return;
     if (button.dataset.view) return navigate(button.dataset.view);
-    if (button.id === 'primary-action') return ({ overview: newExpense, expenses: newExpense, chores: () => choreModal(), supplies: () => supplyModal(), agreement: newIssue })[view]();
+    if (button.id === 'primary-action') return ({ overview: newExpense, expenses: newExpense, chores: () => choreModal(), supplies: () => supplyModal(), agreement: newIssue, life: () => window.RoommateLife && window.RoommateLife.primaryAction() })[view]();
     const action = button.dataset.action; const targetId = button.dataset.id;
     if (action === 'close-modal') closeModal();
     else if (action === 'new-supply') supplyModal();
@@ -231,7 +233,7 @@
     else if (action === 'edit-agreement') modal('编辑室友公约', `<label class="field">每行一条约定<textarea name="clauses" rows="9" required maxlength="3000">${esc(state.clauses.join('\n'))}</textarea></label><p class="small muted">建议先在议事厅取得共识，再更新正式公约。</p>`, 'agreement-form', '保存公约');
     else if (action === 'settle') { const s = suggestions().find(s => s.from === button.dataset.from && s.to === button.dataset.to && s.cents === Number(button.dataset.cents)); if (!s) return toast('结算信息已更新，请重新核对。'); modal('确认线下转账', `<input type="hidden" name="from" value="${s.from}"><input type="hidden" name="to" value="${s.to}"><input type="hidden" name="cents" value="${s.cents}"><div class="settle-confirm"><strong>${member(s.from).name} → ${member(s.to).name}</strong><span>${money(s.cents)}</span></div><p class="muted">请确认双方已经核对实际到账。此操作仅记账，不会发起真实支付；记录后金额自动抵扣，也可撤销。</p>`, 'settle-form', '已转账，记录结算'); }
     else if (action === 'undo-settlement') modal('撤销转账记录', `<input type="hidden" name="id" value="${esc(targetId)}"><p>撤销后，这笔金额会恢复到待结算余额。确认仅用于修正误记的记录。</p>`, 'undo-form', '确认撤销');
-    else if (action === 'reset') modal('重置演示数据', '<p>你在当前浏览器新增的费用、家务、物品和议题将被清除，并恢复初始演示内容。</p>', 'reset-form', '确认重置');
+    else if (action === 'reset') modal('重置演示数据', '<p>你在当前浏览器新增的费用、家务、物品、公约与议题，以及心意留言、惊喜计划、上传照片、大事记和电影夜记录都将被清除，并恢复初始演示内容。</p>', 'reset-form', '确认重置');
   }
   function init() {
     const select = document.getElementById('member-switch');
@@ -240,6 +242,16 @@
     window.addEventListener('hashchange', () => { if (TITLES[location.hash.slice(1)]) { view = location.hash.slice(1); render(); } });
     save(); render();
   }
-  window.RoommateApp = { navigate, reset: () => { state = seed(); save(); render(); }, getState: () => JSON.parse(JSON.stringify(state)), balances: () => ({ ...balances() }), allocate, suggestions: () => suggestions().map(x => ({ ...x })) };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+  function applySupplyCounts(rows) {
+    if (!Array.isArray(rows) || !rows.length) return false;
+    const checked = rows.map(row => ({ supply: state.supplies.find(s => s.id === row.id), quantity: Number(row.quantity) }));
+    if (checked.some(row => !row.supply || !Number.isInteger(row.quantity) || row.quantity < 0 || row.quantity > 9999)) { toast('请核对物品与数量，填写 0—9999 的整数。'); return false; }
+    const previousSupplies = JSON.parse(JSON.stringify(state.supplies)); const previousActivity = [...state.activity];
+    checked.forEach(row => { row.supply.quantity = row.quantity; row.supply.updated = today(); });
+    record(member(state.currentMember).name + '确认了一次公共物品模拟盘点');
+    if (!save()) { state.supplies = previousSupplies; state.activity = previousActivity; render(); toast('存储空间不足，盘点未保存；原库存保持不变。'); return false; }
+    render(); toast('盘点已确认，库存与补货提醒已更新。'); return true;
+  }
+  window.RoommateApp = { navigate, refresh: render, openExpense: newExpense, applySupplyCounts, toast, reset: () => { state = seed(); if (window.RoommateLife) window.RoommateLife.reset(); save(); render(); }, getState: () => JSON.parse(JSON.stringify(state)), balances: () => ({ ...balances() }), allocate, suggestions: () => suggestions().map(x => ({ ...x })) };
+  if (document.readyState !== 'complete') document.addEventListener('DOMContentLoaded', init, { once: true }); else init();
 })();

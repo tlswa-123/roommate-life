@@ -7,8 +7,12 @@
   <meta name="description" content="合租生活管家，把费用、值日、公共物品和室友公约，一起安排明白。">
   <title>同住 · 合租生活管家</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-  <link rel="stylesheet" href="./styles.css">
-  <script src="./app.js" defer></script>
+  <link rel="stylesheet" href="./styles.css?v=20261011-2">
+  <link rel="stylesheet" href="./fun.css?v=20261011-2">
+  <link rel="stylesheet" href="./smart-tools.css?v=20261011-2">
+  <script src="./app.js?v=20261011-2" defer></script>
+  <script src="./lifestyle.js?v=20261011-2" defer></script>
+  <script src="./smart-tools.js?v=20261011-2" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">跳到主要内容</a>
@@ -27,6 +31,7 @@
     <symbol id="icon-users" viewBox="0 0 24 24"><circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 4v2"/></symbol>
     <symbol id="icon-reset" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.6 7M3 4v7h7"/></symbol>
     <symbol id="icon-leaf" viewBox="0 0 24 24"><path d="M20 3c-9 0-16 3-16 10a7 7 0 0 0 7 7c7 0 9-8 9-17Z"/><path d="M4 20 15 9"/></symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></symbol>
   </svg>
 
   <div class="app-layout">
@@ -48,6 +53,7 @@
         <button type="button" data-view="chores" class="nav-button"><svg class="icon" aria-hidden="true"><use href="#icon-sparkles"></use></svg><span>清洁值日</span></button>
         <button type="button" data-view="supplies" class="nav-button"><svg class="icon" aria-hidden="true"><use href="#icon-box"></use></svg><span>公共物品</span></button>
         <button type="button" data-view="agreement" class="nav-button"><svg class="icon" aria-hidden="true"><use href="#icon-note"></use></svg><span>室友公约</span></button>
+        <button type="button" data-view="life" class="nav-button"><svg class="icon" aria-hidden="true"><use href="#icon-heart"></use></svg><span>生活乐趣</span></button>
       </nav>
 
       <div class="sidebar-bottom">
