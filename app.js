@@ -13,7 +13,7 @@
     chores: ['清洁值日', '共同的空间，一起照顾。今天也让家里轻松一点。'],
     supplies: ['公共物品', '消耗有记录，补货有提醒。刚好够用，不再临时找。'],
     agreement: ['室友公约', '把期待说清楚，让彼此都住得舒服。'],
-    life: ['生活乐趣', '藏一点心意，留一些回忆，让合租更像一个家。']
+    life: ['室友空间', '约定怎么一起住，也记录一起生活的小美好。']
   };
   const ACTION_LABELS = { overview: '记一笔费用', expenses: '新增费用', chores: '添加值日', supplies: '登记物品', agreement: '发起议题', life: '写下心意' };
   const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -144,7 +144,7 @@
     const select = document.getElementById('member-switch'); if (select) select.value = state.currentMember;
     document.querySelectorAll('[data-view]').forEach(button => { const active = button.dataset.view === view; button.classList.toggle('active', active); if (active) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current'); });
   }
-  function navigate(next) { if (!TITLES[next]) return; view = next; history.replaceState(null, '', '#' + next); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  function navigate(next) { if (next === 'agreement') { if (window.RoommateLife) window.RoommateLife.selectTab('agreement', false); next = 'life'; } if (!TITLES[next]) return; view = next; history.replaceState(null, '', '#' + next); render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   function closeModal() { const root = document.getElementById('modal-root'); if (!root) return; const dialog = root.querySelector('dialog'); if (dialog && dialog.open) dialog.close(); root.innerHTML = ''; if (lastFocus && lastFocus.isConnected) lastFocus.focus(); }
   function modal(title, body, formId, submitText = '保存', subtitle = '') {
     const root = document.getElementById('modal-root'); if (!root) return;
@@ -236,10 +236,11 @@
     else if (action === 'reset') modal('重置演示数据', '<p>你在当前浏览器新增的费用、家务、物品、公约与议题，以及心意留言、惊喜计划、上传照片、大事记和电影夜记录都将被清除，并恢复初始演示内容。</p>', 'reset-form', '确认重置');
   }
   function init() {
+    if (view === 'agreement') { if (window.RoommateLife) window.RoommateLife.selectTab('agreement', false); view = 'life'; history.replaceState(null, '', '#life'); }
     const select = document.getElementById('member-switch');
     if (select) { select.innerHTML = memberOptions(state.currentMember); select.addEventListener('change', () => { if (MEMBERS.some(m => m.id === select.value)) { state.currentMember = select.value; save(); render(); toast('当前以' + member(state.currentMember).name + '的身份查看。'); } }); }
     document.addEventListener('click', click); document.addEventListener('submit', submit);
-    window.addEventListener('hashchange', () => { if (TITLES[location.hash.slice(1)]) { view = location.hash.slice(1); render(); } });
+    window.addEventListener('hashchange', () => { if (location.hash === '#agreement') navigate('agreement'); else if (TITLES[location.hash.slice(1)]) { view = location.hash.slice(1); render(); } });
     save(); render();
   }
   function applySupplyCounts(rows) {
@@ -252,6 +253,6 @@
     if (!save()) { state.supplies = previousSupplies; state.activity = previousActivity; render(); toast('存储空间不足，盘点未保存；原库存保持不变。'); return false; }
     render(); toast('盘点已确认，库存与补货提醒已更新。'); return true;
   }
-  window.RoommateApp = { navigate, refresh: render, openExpense: newExpense, applySupplyCounts, toast, reset: () => { state = seed(); if (window.RoommateLife) window.RoommateLife.reset(); save(); render(); }, getState: () => JSON.parse(JSON.stringify(state)), balances: () => ({ ...balances() }), allocate, suggestions: () => suggestions().map(x => ({ ...x })) };
+  window.RoommateApp = { navigate, refresh: render, openExpense: newExpense, openIssue: newIssue, renderAgreement: agreementPage, applySupplyCounts, toast, reset: () => { state = seed(); if (window.RoommateLife) window.RoommateLife.reset(); save(); render(); }, getState: () => JSON.parse(JSON.stringify(state)), balances: () => ({ ...balances() }), allocate, suggestions: () => suggestions().map(x => ({ ...x })) };
   if (document.readyState !== 'complete') document.addEventListener('DOMContentLoaded', init, { once: true }); else init();
 })();
